@@ -29,7 +29,7 @@ namespace Bloomberglp.Blpapi
 
         private SessionOptions _sessionOptions;
 
-        #pragma warning disable 0414 //disables the "is assigned but its value is never used" warning
+#pragma warning disable 0414 //disables the "is assigned but its value is never used" warning
         private enum SessionResponseType { sync, async }
         private readonly SessionResponseType _sessionResponse;
 
@@ -38,13 +38,14 @@ namespace Bloomberglp.Blpapi
 
         private enum SessionStateType { initialized, started, serviceOpened, connectionError }
         private SessionStateType _sessionState = SessionStateType.initialized;
-        #pragma warning restore 0414
+#pragma warning restore 0414
 
         private readonly Queue<Request> _sentRequests;
         private readonly EventHandler _asyncHandler;
         private CorrelationID _asyncOpenCorrelation;
         private readonly List<Subscription> _subscriptions;
         private readonly Timer _marketSimulatorTimer;
+        private readonly Timer _refDataSimulatorTimer;
         private readonly object _syncroot = new object();
 
         #region SYNC
@@ -79,6 +80,12 @@ namespace Bloomberglp.Blpapi
                 this._sessionState = SessionStateType.serviceOpened;
                 return true;
             }
+            else if (uri == "//blp/mktdata")
+            {
+                this._sessionUri = SessionUriType.mktData;
+                this._sessionState = SessionStateType.serviceOpened;
+                return true;
+            }
             else
                 return false;
         }
@@ -104,6 +111,7 @@ namespace Bloomberglp.Blpapi
 
             request.correlationId = correlationId;
             this._sentRequests.Enqueue(request);
+
             return correlationId;
         }
 
@@ -136,10 +144,11 @@ namespace Bloomberglp.Blpapi
         {
             this._sessionResponse = SessionResponseType.async;
             this._sessionOptions = sessionOptions;
-            this._sentRequests = null;
+            this._sentRequests = new Queue<Request>();
             this._asyncHandler = handler;
             this._subscriptions = new List<Subscription>();
-            this._marketSimulatorTimer = new Timer(new TimerCallback(this.MarketSimulatorTimerStep), null, (int)TimeSpan.FromSeconds(0).TotalMilliseconds, Timeout.Infinite);
+            this._marketSimulatorTimer = new Timer(this.MarketSimulatorTimerStep, null, (int)TimeSpan.FromSeconds(0).TotalMilliseconds, Timeout.Infinite);
+            this._refDataSimulatorTimer = new Timer(this.RefDataTimerStep, null, (int)TimeSpan.FromMilliseconds(0).TotalMilliseconds, 50);
         }
 
         public bool StartAsync()
@@ -153,7 +162,7 @@ namespace Bloomberglp.Blpapi
                 this._asyncHandler(evtSessionStatus, this);
                 this._asyncHandler(evtServiceStatus, this);
             }
-            
+
             return true;
         }
 
@@ -163,6 +172,11 @@ namespace Bloomberglp.Blpapi
                 this._marketSimulatorTimer.Change(Timeout.Infinite, Timeout.Infinite);
         }
 
+        public void Stop(AbstractSession.StopOption stopOption)
+        {
+            Stop();
+        }
+
         public void Dispose()
         {
             this._marketSimulatorTimer.Dispose();
@@ -170,16 +184,14 @@ namespace Bloomberglp.Blpapi
 
         public void OpenServiceAsync(string uri)
         {
-            this._sessionUri = SessionUriType.mktData;
-            this._sessionState = SessionStateType.serviceOpened;
-            this._asyncOpenCorrelation = new CorrelationID();
+            OpenService(uri);
         }
 
         public void OpenServiceAsync(string uri, CorrelationID correlationId)
         {
             this._sessionUri = SessionUriType.mktData;
             this._sessionState = SessionStateType.serviceOpened;
-            this._asyncOpenCorrelation = correlationId;
+            this._asyncOpenCorrelation = correlationId;            
         }
 
         public void Subscribe(IList<Subscription> subscriptionList)
@@ -259,6 +271,17 @@ namespace Bloomberglp.Blpapi
 
             TimeSpan ts = Types.RandomDataGenerator.TimeBetweenMarketDataEvents();
             this._marketSimulatorTimer.Change(conflationIntervalInMilleseconds.GetValueOrDefault((int)ts.TotalMilliseconds), Timeout.Infinite);
+        }
+
+        private void RefDataTimerStep(object arg)
+        {
+            lock (_syncroot)
+            {
+                if (this._sentRequests.Count == 0) return;
+
+                var evt = NextEvent();
+                _asyncHandler.Invoke(evt, this);
+            }
         }
         #endregion
 

@@ -258,8 +258,43 @@ namespace Bloomberglp.Blpapi
         {
             throw new NotImplementedException("Element doesn't support GetValueAsTime");
         }
+
+        public virtual bool GetValueAsBool()
+        {
+            return Convert.ToBoolean(this.GetValue(0));
+        }
+
+        public virtual bool GetValueAsBool(int index)
+        {
+            return Convert.ToBoolean(this.GetValue(index));
+        }
+
+        public virtual byte[] GetValueAsBytes()
+        {
+            return (byte[]) this.GetValue(0);
+        }
+
+        public virtual byte[] GetValueAsBytes(int index)
+        {
+            return (byte[])this.GetValue(index);
+        }
+
+        public virtual char GetValueAsChar()
+        {
+            return Convert.ToChar(this.GetValue(0));
+        }
+
+        public virtual char GetValueAsChar(int index)
+        {
+            return Convert.ToChar(this.GetValue(index));
+        }
+
+        public virtual Datetime GetValueAsEnumeration()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
-        
+
         #region APPEND AND SET
         public virtual Element AppendElement()
         {

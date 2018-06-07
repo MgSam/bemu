@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BloombergTypes\AbstractSession.cs" />
     <Compile Include="BloombergTypes\Constant.cs" />
     <Compile Include="BloombergTypes\ConstantsList.cs" />
     <Compile Include="BloombergTypes\Constraint.cs" />

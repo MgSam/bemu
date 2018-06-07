@@ -45,6 +45,11 @@ namespace Bloomberglp.Blpapi.HistoricalDataRequest
             }
         }
 
+        public override bool HasElement(string name, bool excludeNullElements = false)
+        {
+            return name == "securityData";
+        }
+
         internal override StringBuilder PrettyPrint(int tabIndent, bool surroundValueWithQuotes = false)
         {
             StringBuilder result = new StringBuilder();

@@ -17,13 +17,16 @@ namespace Bloomberglp.Blpapi.HistoricalDataRequest
     internal class HistoricElementFieldData : Element
     {
         private readonly Dictionary<string, Element> _fields;
+        private readonly List<Element> _fieldElements;
 
         public HistoricElementFieldData(DateTime date, Dictionary<string, object> values)
         {
             this._fields = new Dictionary<string, Element>();
+            _fieldElements = new List<Element>();
 
             Element elmDate = new HistoricElementDateTime(date);
             this._fields.Add(elmDate.Name.ToString(), elmDate);
+            _fieldElements.Add(elmDate);
 
             foreach (var item in values)
             {
@@ -31,6 +34,7 @@ namespace Bloomberglp.Blpapi.HistoricalDataRequest
                 {
                     Element elmDouble = new HistoricElementDouble(item.Key, (double)item.Value);
                     this._fields.Add(elmDouble.Name.ToString(), elmDouble);
+                    _fieldElements.Add(elmDouble);
                 }
             }
         }
@@ -63,6 +67,11 @@ namespace Bloomberglp.Blpapi.HistoricalDataRequest
                 else
                     return base[name, index];
             }
+        }
+
+        public override Element GetElement(int index)
+        {
+            return this._fieldElements[index];
         }
 
         public override int GetElementAsInt32(string name)
@@ -107,7 +116,7 @@ namespace Bloomberglp.Blpapi.HistoricalDataRequest
 
         public override bool HasElement(string name, bool excludeNullElements = false)
         {
-            return this._fields.ContainsKey(name.ToUpper());
+            return this._fields.ContainsKey(name);
         }
 
         internal override StringBuilder PrettyPrint(int tabIndent, bool surroundValueWithQuotes = false)
